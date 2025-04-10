@@ -10,9 +10,9 @@ from celery.utils.log import get_task_logger
 from worker.main import celery
 from worker.llm.text_processing import extract_text_from_document, chunk_text
 from worker.llm.embedding import generate_embeddings
-from backend.app.db.session import SessionLocal
-from backend.app.models.document import Document, DocumentChunk
-from backend.app.core.config import settings
+from app.db.session import SessionLocal
+from app.models.document import Document, DocumentChunk
+from app.core.config import settings
 
 logger = get_task_logger(__name__)
 

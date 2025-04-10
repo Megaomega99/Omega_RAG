@@ -21,7 +21,12 @@ COPY shared /app/shared
 
 # Create directory for shared storage
 RUN mkdir -p /app/shared_storage
+COPY worker /app/worker
 
+# Update PYTHONPATH
+ENV PYTHONPATH=/app:$PYTHONPATH
+# Add backend to PYTHONPATH for both containers
+ENV PYTHONPATH=/app:/app/backend:$PYTHONPATH
 # Expose port
 EXPOSE 8000
 

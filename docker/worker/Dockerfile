@@ -23,7 +23,8 @@ COPY shared /app/shared
 
 # Create directory for shared storage
 RUN mkdir -p /app/shared_storage
-
+# Add backend to PYTHONPATH for both containers
+ENV PYTHONPATH=/app:/app/backend:$PYTHONPATH
 # Set the working directory where Celery will run
 WORKDIR /app
 
