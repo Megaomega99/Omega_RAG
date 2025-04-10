@@ -89,8 +89,7 @@ async def upload_document(
     )
     
     # Start document processing task asynchronously
-    celery_app.send_task('process_document', args=[document.id])
-    
+    celery_app.send_task('worker.tasks.document_processing.process_document', args=[document.id])    
     return document
 
 

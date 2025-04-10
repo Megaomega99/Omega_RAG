@@ -33,24 +33,26 @@ class ApiClient:
         return headers
     
     async def get(self, endpoint: str) -> Dict[str, Any]:
-        """
-        Make a GET request to the API.
-        
-        Args:
-            endpoint (str): API endpoint
-            
-        Returns:
-            Dict[str, Any]: API response
-        """
         url = f"{self.base_url}/api{endpoint}"
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=self._get_headers())
-            
-            if response.status_code >= 400:
-                return {"error": response.text, "status_code": response.status_code}
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, headers=self._get_headers(), timeout=30.0)
                 
-            return response.json()
-    
+                if response.status_code >= 400:
+                    try:
+                        error_data = response.json()
+                        error_detail = error_data.get("detail", response.text)
+                    except:
+                        error_detail = response.text
+                        
+                    return {"error": error_detail, "status_code": response.status_code}
+                    
+                return response.json()
+        except httpx.RequestError as e:
+            return {"error": f"Connection error: {str(e)}", "status_code": 500}
+        except Exception as e:
+            return {"error": f"Unexpected error: {str(e)}", "status_code": 500}
+        
     async def post(self, endpoint: str, data: Dict[str, Any] = None, files: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Make a POST request to the API.

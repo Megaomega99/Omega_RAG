@@ -10,12 +10,12 @@ from backend.app.core.config import settings
 logger = get_task_logger(__name__)
 
 # Configure Google Generative AI
-GEMINI_API_KEY = settings.GEMINI_API_KEY
+# Prioritize environment variable over settings from backend
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or settings.GEMINI_API_KEY
 if not GEMINI_API_KEY:
     logger.warning("GEMINI_API_KEY is not set. Embedding functionality will not work.")
 else:
     genai.configure(api_key=GEMINI_API_KEY)
-
 
 def generate_embeddings(text: str) -> List[float]:
     """

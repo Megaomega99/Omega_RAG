@@ -17,7 +17,7 @@ from backend.app.core.config import settings
 logger = get_task_logger(__name__)
 
 
-@shared_task(name="process_document")
+@shared_task(name="worker.tasks.document_processing.process_document")
 def process_document(document_id: int) -> Dict[str, Any]:
     """
     Process a document by extracting text, chunking, and generating embeddings.

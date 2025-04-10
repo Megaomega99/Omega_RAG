@@ -16,6 +16,9 @@ celery = Celery("omega_rag_worker")
 celery.conf.broker_url = REDIS_URL
 celery.conf.result_backend = REDIS_URL
 
+# Explicitly discover tasks
+celery.autodiscover_tasks(['worker.tasks'])
+
 # Import Celery tasks
 from worker.tasks import document_processing, rag_tasks
 
