@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    ports:
+      - "80:80"
+    networks:
+      - omega_network
+    depends_on:
+      - backend
+      - frontend
+    restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    command: gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - FILE_STORAGE_PATH=/app/shared_storage
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_ALGORITHM=${JWT_ALGORITHM}
+      - ENVIRONMENT=production
+    volumes:
+      - shared_storage:/app/shared_storage
+    networks:
+      - omega_network
+    restart: always
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    command: celery -A worker.main.celery worker --loglevel=info
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - FILE_STORAGE_PATH=/app/shared_storage
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ENVIRONMENT=production
+    volumes:
+      - shared_storage:/app/shared_storage
+    networks:
+      - omega_network
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    command: python -m frontend.main
+    environment:
+      - API_URL=http://backend:8000
+      - FLET_PORT=7777
+      - FLET_SERVER=true
+    networks:
+      - omega_network
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - omega_network
+    restart: always
+
+volumes:
+  shared_storage:
+  redis_data:
+
+networks:
+  omega_network:
+    driver: bridge

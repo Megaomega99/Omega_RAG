@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: omega_rag_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-omega_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omega_password}
+      POSTGRES_DB: ${POSTGRES_DB:-omega_rag}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - omega_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omega_user} -d ${POSTGRES_DB:-omega_rag}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: omega_rag_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - omega_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    container_name: omega_rag_backend
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+      - ./shared_storage:/app/shared_storage
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-omega_user}:${POSTGRES_PASSWORD:-omega_password}@postgres:5432/${POSTGRES_DB:-omega_rag}
+      - REDIS_URL=redis://redis:6379/0
+      - FILE_STORAGE_PATH=/app/shared_storage
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-supersecretkey}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ENVIRONMENT=development
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - omega_network
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    container_name: omega_rag_worker
+    command: celery -A worker.main.celery worker --loglevel=info
+    volumes:
+      - ./worker:/app/worker
+      - ./backend:/app/backend
+      - ./shared_storage:/app/shared_storage
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-omega_user}:${POSTGRES_PASSWORD:-omega_password}@postgres:5432/${POSTGRES_DB:-omega_rag}
+      - REDIS_URL=redis://redis:6379/0
+      - FILE_STORAGE_PATH=/app/shared_storage
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - ENVIRONMENT=development
+    depends_on:
+      - backend
+      - redis
+    networks:
+      - omega_network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+    container_name: omega_rag_frontend
+    command: python -m frontend.main
+    volumes:
+      - ./frontend:/app/frontend
+    environment:
+      - API_URL=http://backend:8000
+      - FLET_PORT=7777
+    ports:
+      - "7777:7777"
+    depends_on:
+      - backend
+    networks:
+      - omega_network
+
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+    container_name: omega_rag_nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - omega_network
+
+volumes:
+  postgres_data:
+  shared_storage:
+
+networks:
+  omega_network:
+    driver: bridge
