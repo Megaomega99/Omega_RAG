@@ -32,14 +32,19 @@ services:
     restart: always
 
   ollama:
-    build:
-      context: .
-      dockerfile: docker/ollama.Dockerfile
+    image: ollama/ollama:latest
     volumes:
       - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
     restart: always
-    # Pull the tinyllama model during initialization
-    command: sh -c "ollama serve & sleep 10 && ollama pull tinyllama && tail -f /dev/null"
+    # Replace the problematic command with direct ollama commands
+    entrypoint: "/bin/bash"
+    command: >
+      -c "ollama serve &
+      sleep 10 &&
+      ollama pull tinyllama &&
+      tail -f /dev/null"
 
   frontend:
     build:
