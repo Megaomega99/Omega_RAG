@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/rag_saas
+      - SECRET_KEY=your-secret-key-change-in-production
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=tinyllama
+    depends_on:
+      - db
+      - ollama
+    restart: always
+
+  db:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=rag_saas
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  ollama:
+    build:
+      context: .
+      dockerfile: docker/ollama.Dockerfile
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: always
+    # Pull the tinyllama model during initialization
+    command: sh -c "ollama serve & sleep 10 && ollama pull tinyllama && tail -f /dev/null"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "7000:7000"
+    environment:
+      - API_BASE_URL=http://api:8000/api/v1
+    command: python -m app.frontend.main
+    depends_on:
+      - api
+    restart: always
+
+volumes:
+  postgres_data:
+  ollama_data:
