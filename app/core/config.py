@@ -12,8 +12,8 @@ class Settings(BaseSettings):
         "DATABASE_URL", "postgresql://postgres:your_new_password@localhost:5432/rag_saas"
     )
     
-    # File storage
-    UPLOAD_FOLDER: str = os.getenv("UPLOAD_FOLDER", "./data")
+    # File storage - will be mounted via NFS
+    UPLOAD_FOLDER: str = os.getenv("UPLOAD_FOLDER", "/mnt/nfs/data")
     
     # Ollama configuration
     OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")

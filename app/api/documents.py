@@ -24,16 +24,15 @@ async def process_document_task(document_id: int, file: UploadFile, db: Session)
     document.processed = True
     db.commit()
 
+# app/api/documents.py
 @router.post("/")
 async def upload_document(
-    background_tasks: BackgroundTasks,
     title: str = Form(...),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ) -> Any:
-    """Upload a new document for processing."""
-    # Create document record
+    # Create document record first
     document = crud.create_document(
         db, 
         title=title, 
@@ -43,14 +42,27 @@ async def upload_document(
         owner_id=current_user.id
     )
     
-    # Process document in background
-    background_tasks.add_task(process_document_task, document.id, file, db)
+    # Save the file to the NFS share
+    os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
+    file_path = os.path.join(settings.UPLOAD_FOLDER, f"{document.id}_{file.filename}")
+    
+    try:
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error saving file: {str(e)}")
+    
+    # Update document with file path and mark as queued
+    document.file_path = file_path
+    document.queued = True
+    db.commit()
     
     return {
         "id": document.id,
         "title": document.title,
         "filename": document.filename,
-        "status": "processing"
+        "status": "queued for processing"
     }
 
 @router.get("/")

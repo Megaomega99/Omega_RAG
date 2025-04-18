@@ -26,7 +26,7 @@ class Document(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     processed = Column(Boolean, default=False)
     owner_id = Column(Integer, ForeignKey("users.id"))
-    
+    queued = Column(Boolean, default=False)
     owner = relationship("User", back_populates="documents")
     chunks = relationship("DocumentChunk", back_populates="document")
 
