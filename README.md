@@ -18,7 +18,7 @@ A Retrieval-Augmented Generation (RAG) Software-as-a-Service application that en
 
 ## Getting Started
 
-1. Clone the repository: https://github.com/Megaomega99/rag-saas.git
+1. Clone the repository: [https://github.com/Megaomega99/rag-saas.git](https://github.com/Megaomega99/Omega_RAG.git)
 2. Start the application with Docker Compose: docker-compose up -d
 3. Access the application:
 - Frontend UI: http://localhost:7000
