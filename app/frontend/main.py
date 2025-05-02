@@ -4,7 +4,7 @@ import os
 import traceback
 
 # API configuration
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://localhost:8000/api/v1")
+API_BASE_URL = os.environ.get("API_BASE_URL", "http://10.128.0.9:8000/api/v1")  # Default to web-server internal IP
 
 def main(page: ft.Page):
     # Basic page configuration
@@ -394,7 +394,20 @@ def main(page: ft.Page):
                 ft.Text(f"Error loading history: {str(ex)}", color="red")
             )
             page.update()
-    
+    def handle_request_error(e, error_type="Request"):
+        """Handle request errors in GCP environment with proper logging"""
+        error_details = str(e)
+        # Check for connection errors which might indicate GCP networking issues
+        if "Connection refused" in error_details or "Cannot connect" in error_details:
+            return f"Error: Cannot connect to the server. Please ensure the service is running and network connectivity is available. Details: {error_details}"
+        elif "Timeout" in error_details:
+            return f"Error: The request timed out. The server might be under heavy load. Please try again later. Details: {error_details}"
+        elif "500" in error_details:
+            return f"Error: The server encountered an internal error. Please try again later or contact support. Details: {error_details}"
+        elif "403" in error_details:
+            return f"Error: Access forbidden. You might not have the necessary permissions. Details: {error_details}"
+        else:
+            return f"{error_type} Error: {error_details}"
     # Set up the page structure
     page.add(
         ft.Container(

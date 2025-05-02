@@ -86,8 +86,18 @@ async def process_document(file: UploadFile, document_id: int, db_session) -> Li
     # Ensure upload directory exists
     os.makedirs(settings.UPLOAD_FOLDER, exist_ok=True)
     
-    # Define file path
-    file_path = os.path.join(settings.UPLOAD_FOLDER, f"{document_id}_{file.filename}")
+    # Define file path - using a structured approach for GCP instance
+    # Store files in a directory structure by user ID and document ID
+    from app.db import models
+    document = db_session.query(models.Document).filter(models.Document.id == document_id).first()
+    owner_id = document.owner_id
+    
+    # Create user-specific directory
+    user_dir = os.path.join(settings.UPLOAD_FOLDER, f"user_{owner_id}")
+    os.makedirs(user_dir, exist_ok=True)
+    
+    # Define file path with document ID
+    file_path = os.path.join(user_dir, f"{document_id}_{file.filename}")
     
     # Save uploaded file
     try:
@@ -99,7 +109,6 @@ async def process_document(file: UploadFile, document_id: int, db_session) -> Li
     
     # Update document with file path
     from app.db import crud, models
-    document = db_session.query(models.Document).filter(models.Document.id == document_id).first()
     document.file_path = file_path
     db_session.commit()
     
